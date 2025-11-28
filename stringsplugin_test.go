@@ -72,11 +72,6 @@ func TestServeHTTP_AppliesReplacer(t *testing.T) {
 	ctx := context.WithValue(req.Context(), caddy.ReplacerCtxKey, repl)
 	req = req.WithContext(ctx)
 
-	// Provision is called for completeness, though it does nothing here
-	if err := m.Provision(caddy.Context{}); err != nil {
-		t.Fatalf("Provision returned error: %v", err)
-	}
-
 	// Call the ServeHTTP handler
 	err := m.ServeHTTP(rr, req, nextHandler{t: t})
 	if err != nil {
@@ -90,16 +85,8 @@ func TestServeHTTP_AppliesReplacer(t *testing.T) {
 	}
 }
 
-func TestProvision_DoesNotError(t *testing.T) {
-	m := &Strings{}
-	if err := m.Provision(caddy.Context{}); err != nil {
-		t.Fatalf("Provision returned error: %v", err)
-	}
-}
-
 // Ensure Strings satisfies the handler-related interfaces used by Caddy
 var (
 	_ caddy.Module                = (*Strings)(nil)
-	_ caddy.Provisioner           = (*Strings)(nil)
 	_ caddyhttp.MiddlewareHandler = (*Strings)(nil)
 )

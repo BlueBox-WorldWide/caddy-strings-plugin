@@ -1,7 +1,6 @@
 package stringsplugin
 
 import (
-	"fmt"
 	"net/http"
 	"strings"
 
@@ -20,7 +19,6 @@ func init() {
 // Interface guards
 var (
 	_ caddy.Module                = (*Strings)(nil)
-	_ caddy.Provisioner           = (*Strings)(nil)
 	_ caddyhttp.MiddlewareHandler = (*Strings)(nil)
 	_ caddyfile.Unmarshaler       = (*Strings)(nil)
 )
@@ -35,46 +33,13 @@ func (Strings) CaddyModule() caddy.ModuleInfo {
 	}
 }
 
-// Provision registers a global mapping for placeholders
-func (m *Strings) Provision(ctx caddy.Context) error {
-    // global mapping for .upper/.lower
-    repl := caddy.NewReplacer()
-    repl.Map(func(key string) (any, bool) {
-        base := key
-        lower := false
-        upper := false
-
-        if strings.HasSuffix(key, ".lower") {
-            base = strings.TrimSuffix(key, ".lower")
-            lower = true
-        } else if strings.HasSuffix(key, ".upper") {
-            base = strings.TrimSuffix(key, ".upper")
-            upper = true
-        }
-
-        v, ok := repl.Get(base)
-        if !ok || v == nil {
-            return nil, false
-        }
-        val := fmt.Sprintf("%v", v)
-        if lower {
-            val = strings.ToLower(val)
-        } else if upper {
-            val = strings.ToUpper(val)
-        }
-        return val, true
-    })
-
-    return nil
-}
-
 func (m *Strings) ServeHTTP(w http.ResponseWriter, r *http.Request, next caddyhttp.Handler) error {
 	repl, ok := r.Context().Value(caddy.ReplacerCtxKey).(*caddy.Replacer)
 	if ok {
 		repl.Map(func(key string) (any, bool) {
-			base := key
 			lower := false
 			upper := false
+			base := key
 
 			if strings.HasSuffix(key, ".lower") {
 				base = strings.TrimSuffix(key, ".lower")
@@ -84,24 +49,30 @@ func (m *Strings) ServeHTTP(w http.ResponseWriter, r *http.Request, next caddyht
 				upper = true
 			}
 
-			// Use ReplaceAll to resolve built-in placeholders
-			val := repl.ReplaceAll(base, "")
+			val, _ := repl.ReplaceFunc(base, func(variable string, v any) (any, error) {
+				str, ok := v.(string)
+				if !ok {
+					return v, nil // leave non-string values unchanged
+				}
+			
+				if lower {
+					return strings.ToLower(str), nil
+				} else if upper {
+					return strings.ToUpper(str), nil
+				}
+				return str, nil
+			})			
+
 			if val == "" {
-				return nil, false
+				return "", false
 			}
-
-			if lower {
-				val = strings.ToLower(val)
-			} else if upper {
-				val = strings.ToUpper(val)
-			}
-
 			return val, true
 		})
 	}
 
 	return next.ServeHTTP(w, r)
 }
+
 
 // UnmarshalCaddyfile reads static options (none for now)
 func (m *Strings) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
