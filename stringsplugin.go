@@ -75,7 +75,7 @@ func mapStringCases(repl *caddy.Replacer) {
 				val = strings.ToUpper(val)
 			}
 
-			return val, true
+			return nil, false
 		}
 		
 		return nil, false
