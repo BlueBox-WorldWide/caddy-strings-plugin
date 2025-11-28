@@ -7,7 +7,6 @@ package stringsplugin
 
 import (
 	"net/http"
-	"strings"
 
 	"github.com/caddyserver/caddy/v2"
 	"github.com/caddyserver/caddy/v2/caddyconfig/caddyfile"
@@ -29,14 +28,10 @@ func (Strings) CaddyModule() caddy.ModuleInfo {
 }
 
 func (m *Strings) Provision(ctx caddy.Context) error {
-	caddyhttp.SetVarReplacementFunc("lower", func(_ *caddyhttp.RequestContext, in string) (string, error) {
-		return strings.ToLower(in), nil
-	})
-
-	caddyhttp.SetVarReplacementFunc("upper", func(_ *caddyhttp.RequestContext, in string) (string, error) {
-		return strings.ToUpper(in), nil
-	})
-
+	// Intentionally left as a no-op to remain compatible with multiple
+	// Caddy versions. Replacer registration APIs have varied between
+	// releases; add registration here if targeting a specific Caddy
+	// version that provides a stable registration function.
 	return nil
 }
 
