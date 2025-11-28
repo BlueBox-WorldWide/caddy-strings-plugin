@@ -64,15 +64,14 @@ func mapStringCases(repl *caddy.Replacer) {
 		}
 
 		if (lower || upper) {
-			val, found := repl.GetString(base)
-			if !found {
-				return nil, false
-			}
+			val := repl.ReplaceAll(base, "")
 
-			if lower {
-				val = strings.ToLower(val)
-			} else if upper {
-				val = strings.ToUpper(val)
+			if (val != "") {
+				if lower {
+					val = strings.ToLower(val)
+				} else if upper {
+					val = strings.ToUpper(val)
+				}
 			}
 
 			return val, true
