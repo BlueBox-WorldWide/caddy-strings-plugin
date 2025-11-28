@@ -5,7 +5,6 @@ import (
 	"strings"
 
 	"github.com/caddyserver/caddy/v2"
-	"github.com/caddyserver/caddy/v2/caddyconfig/caddyfile"
 	"github.com/caddyserver/caddy/v2/caddyconfig/httpcaddyfile"
 	"github.com/caddyserver/caddy/v2/modules/caddyhttp"
 )
@@ -21,7 +20,6 @@ var (
 	_ caddy.Module                = (*Strings)(nil)
 	_ caddy.Provisioner           = (*Strings)(nil)
 	_ caddyhttp.MiddlewareHandler = (*Strings)(nil)
-	_ caddyfile.Unmarshaler       = (*Strings)(nil)
 )
 
 type Strings struct {
