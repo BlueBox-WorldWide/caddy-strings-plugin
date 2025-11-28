@@ -20,6 +20,8 @@ xcaddy build \
 
 This third-party middleware must be ordered so it runs before the directive that consumes the modified placeholders (for example `respond`, `rewrite`, or `reverse_proxy`).
 
+```order strings before redir```
+
 ### Example — simple respond
 
 Global options must order the middleware:
