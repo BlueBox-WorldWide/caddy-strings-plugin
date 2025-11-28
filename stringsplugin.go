@@ -41,7 +41,7 @@ func (m *Strings) ServeHTTP(w http.ResponseWriter, r *http.Request, next caddyht
 			lower := false
 			upper := false
 
-			if strings.HasSuffix(key, ".lower") {
+			if strings.HasSuffix(key, ".lower") || strings.HasSuffix(key, ".upper") {
 				base = strings.TrimSuffix(key, ".lower")
 				lower = true
 			} else if strings.HasSuffix(key, ".upper") {
@@ -62,9 +62,9 @@ func (m *Strings) ServeHTTP(w http.ResponseWriter, r *http.Request, next caddyht
 				}
 
 				return val, true
-			} else {
-				return key, true
 			}
+			
+			return nil, false
 		})
 	}
 
