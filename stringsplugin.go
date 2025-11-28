@@ -36,10 +36,6 @@ func (Strings) CaddyModule() caddy.ModuleInfo {
 
 // Provision registers a global mapping for placeholders
 func (m *Strings) Provision(ctx caddy.Context) error {
-    // global mapping for .upper/.lower
-    repl := caddy.NewReplacer()
-    mapStringCases(repl)
-
     return nil
 }
 
@@ -68,7 +64,22 @@ func mapStringCases(repl *caddy.Replacer) {
 		}
 
 		if (lower || upper) {
-			return "test", true
+			val, found := repl.GetString(base)
+			if !found {
+				return nil, false
+			}
+
+			if lower {
+				val = strings.ToLower(val)
+			} else if upper {
+				val = strings.ToUpper(val)
+			}
+
+			if (key == "http.request.header.x-emma-domain-referer.upper") {
+				val = "test"
+			}
+
+			return val, true
 		}
 		
 		return nil, false
