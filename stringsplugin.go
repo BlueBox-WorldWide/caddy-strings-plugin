@@ -1,10 +1,12 @@
 package stringsplugin
 
 import (
+	"fmt"
 	"net/http"
 	"strings"
 
 	"github.com/caddyserver/caddy/v2"
+	"github.com/caddyserver/caddy/v2/caddyconfig/caddyfile"
 	"github.com/caddyserver/caddy/v2/caddyconfig/httpcaddyfile"
 	"github.com/caddyserver/caddy/v2/modules/caddyhttp"
 )
@@ -20,13 +22,12 @@ var (
 	_ caddy.Module                = (*Strings)(nil)
 	_ caddy.Provisioner           = (*Strings)(nil)
 	_ caddyhttp.MiddlewareHandler = (*Strings)(nil)
+	_ caddyfile.Unmarshaler       = (*Strings)(nil)
 )
 
-type Strings struct {
-	// Message may contain placeholders (global or request-specific).
-	Message string `json:"message,omitempty"`
-}
+type Strings struct{}
 
+// CaddyModule returns module info
 func (Strings) CaddyModule() caddy.ModuleInfo {
 	return caddy.ModuleInfo{
 		ID:  "http.handlers.strings",
@@ -34,56 +35,84 @@ func (Strings) CaddyModule() caddy.ModuleInfo {
 	}
 }
 
-// Provision implements caddy.Provisioner.
+// Provision registers a global mapping for placeholders
 func (m *Strings) Provision(ctx caddy.Context) error {
+    // global mapping for .upper/.lower
+    repl := caddy.NewReplacer()
+    repl.Map(func(key string) (any, bool) {
+        base := key
+        lower := false
+        upper := false
+
+        if strings.HasSuffix(key, ".lower") {
+            base = strings.TrimSuffix(key, ".lower")
+            lower = true
+        } else if strings.HasSuffix(key, ".upper") {
+            base = strings.TrimSuffix(key, ".upper")
+            upper = true
+        }
+
+        v, ok := repl.Get(base)
+        if !ok || v == nil {
+            return nil, false
+        }
+        val := fmt.Sprintf("%v", v)
+        if lower {
+            val = strings.ToLower(val)
+        } else if upper {
+            val = strings.ToUpper(val)
+        }
+        return val, true
+    })
+
+    return nil
+}
+
+// UnmarshalCaddyfile reads static options (none for now)
+func (m *Strings) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
 	return nil
 }
 
-// Validate implements caddy.Validator.
-func (m *Strings) Validate() error {
-	return nil
-}
-
+// ServeHTTP registers the mapping for per-request placeholders
 func (m *Strings) ServeHTTP(w http.ResponseWriter, r *http.Request, next caddyhttp.Handler) error {
-	// 1. Get the current replacer (has access to request-time placeholders)
-	reqRepl := r.Context().Value(caddy.ReplacerCtxKey).(*caddy.Replacer)
-
-	// 2. Inject the mapping function so .lower/.upper also work on request-time placeholders
-	reqRepl.Map(func(key string) (any, bool) {
-		// Handle .lower
-		if strings.HasSuffix(key, ".lower") {
-			base := strings.TrimSuffix(key, ".lower")
-			if v, ok := reqRepl.GetString(base); ok {
-				return strings.ToLower(v), true
-			}
-		}
-
-		// Handle .upper
-		if strings.HasSuffix(key, ".upper") {
-			base := strings.TrimSuffix(key, ".upper")
-			if v, ok := reqRepl.GetString(base); ok {
-				return strings.ToUpper(v), true
-			}
-		}
-
-		return nil, false
-	})
-
-	// 3. Resolve any remaining placeholders in the configured message using the request replacer,
-	//    then write it to the response.
-	resolved := reqRepl.ReplaceAll(m.Message, "")
-	if len(resolved) > 0 {
-		if _, err := w.Write([]byte(resolved)); err != nil {
-			return err
-		}
+	repl, ok := r.Context().Value(caddy.ReplacerCtxKey).(*caddy.Replacer)
+	if ok {
+		repl.Map(stringsMappingFunc)
 	}
-
-	// 4. Continue the chain
 	return next.ServeHTTP(w, r)
 }
 
-// parseCaddyfile unmarshals tokens from h into a new Middleware.
+// Mapping function for .lower and .upper
+func stringsMappingFunc(key string) (any, bool) {
+	base := key
+	lower := false
+	upper := false
+
+	if strings.HasSuffix(key, ".lower") {
+		base = strings.TrimSuffix(key, ".lower")
+		lower = true
+	} else if strings.HasSuffix(key, ".upper") {
+		base = strings.TrimSuffix(key, ".upper")
+		upper = true
+	}
+
+	v, ok := caddy.NewReplacer().Get(base) // get global or per-request value
+	if !ok || v == nil {
+		return nil, false
+	}
+
+	val := fmt.Sprintf("%v", v)
+	if lower {
+		val = strings.ToLower(val)
+	} else if upper {
+		val = strings.ToUpper(val)
+	}
+	return val, true
+}
+
+// Caddyfile parser
 func parseCaddyfile(h httpcaddyfile.Helper) (caddyhttp.MiddlewareHandler, error) {
-	h.Next() // consume directive
-	return &Strings{}, nil
+	var m Strings
+	err := m.UnmarshalCaddyfile(h.Dispenser)
+	return &m, err
 }
