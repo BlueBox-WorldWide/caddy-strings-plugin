@@ -6,11 +6,13 @@ import (
 
 	"github.com/caddyserver/caddy/v2"
 	"github.com/caddyserver/caddy/v2/caddyconfig/caddyfile"
+	"github.com/caddyserver/caddy/v2/caddyconfig/httpcaddyfile"
 	"github.com/caddyserver/caddy/v2/modules/caddyhttp"
 )
 
 func init() {
-    caddy.RegisterModule(Strings{})
+	caddy.RegisterModule(Strings{})
+	httpcaddyfile.RegisterHandlerDirective("strings", parseCaddyfile)
 }
 
 // Interface guards
@@ -69,4 +71,9 @@ func (m *Strings) ServeHTTP(w http.ResponseWriter, r *http.Request, next caddyht
 
     // 3. Continue the chain
     return next.ServeHTTP(w, r)
+}
+
+func parseCaddyfile(h httpcaddyfile.Helper) (caddyhttp.MiddlewareHandler, error) {
+	h.Next() // consume directive
+	return &Strings{}, nil
 }
