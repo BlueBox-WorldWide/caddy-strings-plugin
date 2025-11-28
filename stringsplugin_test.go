@@ -1,4 +1,4 @@
-package stringsplugin
+package strings_plugin
 
 import (
 	"context" // Required for context.WithValue
@@ -12,12 +12,12 @@ import (
 )
 
 // nextHandler satisfies the caddyhttp.Handler interface and is used to verify
-// that the Strings plugin correctly modified the request replacer.
+// that the CaddyStrings plugin correctly modified the request replacer.
 type nextHandler struct {
 	t *testing.T
 }
 
-// ServeHTTP attempts to use the custom placeholders added by the Strings module
+// ServeHTTP attempts to use the custom placeholders added by the CaddyStrings module
 // and writes the result to the response body for verification.
 func (h nextHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) error {
 	// 1. Retrieve the replacer from the context
@@ -54,7 +54,7 @@ func (h nextHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) error {
 }
 
 func TestServeHTTP_AppliesReplacer(t *testing.T) {
-	m := &Strings{}
+	m := &CaddyStrings{}
 
 	// Create a base replacer with the value we want to manipulate
 	repl := caddy.NewReplacer()
@@ -85,8 +85,8 @@ func TestServeHTTP_AppliesReplacer(t *testing.T) {
 	}
 }
 
-// Ensure Strings satisfies the handler-related interfaces used by Caddy
+// Ensure CaddyStrings satisfies the handler-related interfaces used by Caddy
 var (
-	_ caddy.Module                = (*Strings)(nil)
-	_ caddyhttp.MiddlewareHandler = (*Strings)(nil)
+	_ caddy.Module                = (*CaddyStrings)(nil)
+	_ caddyhttp.MiddlewareHandler = (*CaddyStrings)(nil)
 )

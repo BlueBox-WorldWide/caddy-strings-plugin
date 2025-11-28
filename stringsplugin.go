@@ -1,4 +1,4 @@
-package stringsplugin
+package strings_plugin
 
 import (
 	"net/http"
@@ -11,35 +11,35 @@ import (
 )
 
 func init() {
-	caddy.RegisterModule(Strings{})
+	caddy.RegisterModule(CaddyStrings{})
 	httpcaddyfile.RegisterHandlerDirective("strings", parseCaddyfile)
 	httpcaddyfile.RegisterDirectiveOrder("strings", "before", "redir")
 }
 
 // Interface guards
 var (
-	_ caddy.Module                = (*Strings)(nil)
-	_ caddy.Provisioner           = (*Strings)(nil)
-	_ caddyhttp.MiddlewareHandler = (*Strings)(nil)
-	_ caddyfile.Unmarshaler       = (*Strings)(nil)
+	_ caddy.Module                = (*CaddyStrings)(nil)
+	_ caddy.Provisioner           = (*CaddyStrings)(nil)
+	_ caddyhttp.MiddlewareHandler = (*CaddyStrings)(nil)
+	_ caddyfile.Unmarshaler       = (*CaddyStrings)(nil)
 )
 
-type Strings struct{}
+type CaddyStrings struct{}
 
 // CaddyModule returns module info
-func (Strings) CaddyModule() caddy.ModuleInfo {
+func (CaddyStrings) CaddyModule() caddy.ModuleInfo {
 	return caddy.ModuleInfo{
 		ID:  "http.handlers.strings",
-		New: func() caddy.Module { return new(Strings) },
+		New: func() caddy.Module { return new(CaddyStrings) },
 	}
 }
 
 // Provision registers a global mapping for placeholders
-func (m *Strings) Provision(ctx caddy.Context) error {
+func (m *CaddyStrings) Provision(ctx caddy.Context) error {
     return nil
 }
 
-func (m *Strings) ServeHTTP(w http.ResponseWriter, r *http.Request, next caddyhttp.Handler) error {
+func (m *CaddyStrings) ServeHTTP(w http.ResponseWriter, r *http.Request, next caddyhttp.Handler) error {
 	repl, ok := r.Context().Value(caddy.ReplacerCtxKey).(*caddy.Replacer)
 	if ok {
 		mapStringCases(repl)
@@ -75,10 +75,6 @@ func mapStringCases(repl *caddy.Replacer) {
 				val = strings.ToUpper(val)
 			}
 
-			if (key == "http.request.header.x-emma-domain-referer.upper") {
-				val = "test"
-			}
-
 			return val, true
 		}
 		
@@ -87,13 +83,13 @@ func mapStringCases(repl *caddy.Replacer) {
 }
 
 // UnmarshalCaddyfile reads static options (none for now)
-func (m *Strings) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
+func (m *CaddyStrings) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
 	return nil
 }
 
 // Caddyfile parser
 func parseCaddyfile(h httpcaddyfile.Helper) (caddyhttp.MiddlewareHandler, error) {
-	var m Strings
+	var m CaddyStrings
 	err := m.UnmarshalCaddyfile(h.Dispenser)
 	return &m, err
 }
