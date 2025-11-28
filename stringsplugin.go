@@ -68,46 +68,44 @@ func (m *Strings) Provision(ctx caddy.Context) error {
     return nil
 }
 
-// UnmarshalCaddyfile reads static options (none for now)
-func (m *Strings) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
-	return nil
-}
-
-// ServeHTTP registers the mapping for per-request placeholders
 func (m *Strings) ServeHTTP(w http.ResponseWriter, r *http.Request, next caddyhttp.Handler) error {
 	repl, ok := r.Context().Value(caddy.ReplacerCtxKey).(*caddy.Replacer)
 	if ok {
-		repl.Map(stringsMappingFunc)
+		repl.Map(func(key string) (any, bool) {
+			base := key
+			lower := false
+			upper := false
+
+			if strings.HasSuffix(key, ".lower") {
+				base = strings.TrimSuffix(key, ".lower")
+				lower = true
+			} else if strings.HasSuffix(key, ".upper") {
+				base = strings.TrimSuffix(key, ".upper")
+				upper = true
+			}
+
+			// Use ReplaceAll to resolve built-in placeholders
+			val := repl.ReplaceAll(base, "")
+			if val == "" {
+				return nil, false
+			}
+
+			if lower {
+				val = strings.ToLower(val)
+			} else if upper {
+				val = strings.ToUpper(val)
+			}
+
+			return val, true
+		})
 	}
+
 	return next.ServeHTTP(w, r)
 }
 
-// Mapping function for .lower and .upper
-func stringsMappingFunc(key string) (any, bool) {
-	base := key
-	lower := false
-	upper := false
-
-	if strings.HasSuffix(key, ".lower") {
-		base = strings.TrimSuffix(key, ".lower")
-		lower = true
-	} else if strings.HasSuffix(key, ".upper") {
-		base = strings.TrimSuffix(key, ".upper")
-		upper = true
-	}
-
-	v, ok := caddy.NewReplacer().Get(base) // get global or per-request value
-	if !ok || v == nil {
-		return nil, false
-	}
-
-	val := fmt.Sprintf("%v", v)
-	if lower {
-		val = strings.ToLower(val)
-	} else if upper {
-		val = strings.ToUpper(val)
-	}
-	return val, true
+// UnmarshalCaddyfile reads static options (none for now)
+func (m *Strings) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
+	return nil
 }
 
 // Caddyfile parser
