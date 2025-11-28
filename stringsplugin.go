@@ -1,12 +1,8 @@
 package stringsplugin
 
-// Package stringsplugin provides a Caddy module that implements
-// placeholder filters for string manipulation, specifically
-// converting strings to lowercase or uppercase. It registers
-// these filters so they can be used in Caddy's configuration.
-
 import (
 	"net/http"
+	"strings"
 
 	"github.com/caddyserver/caddy/v2"
 	"github.com/caddyserver/caddy/v2/caddyconfig/caddyfile"
@@ -14,31 +10,63 @@ import (
 )
 
 func init() {
-	caddy.RegisterModule(Strings{})
+    caddy.RegisterModule(Strings{})
 }
 
-// Strings provides lowercase/uppercase placeholder filters.
+// Interface guards
+var (
+    _ caddy.Module                = (*Strings)(nil)
+    _ caddy.Provisioner           = (*Strings)(nil)
+    _ caddyhttp.MiddlewareHandler = (*Strings)(nil)
+    _ caddyfile.Unmarshaler       = (*Strings)(nil)
+)
+
 type Strings struct{}
 
 func (Strings) CaddyModule() caddy.ModuleInfo {
-	return caddy.ModuleInfo{
-		ID:  "http.handlers.strings",
-		New: func() caddy.Module { return new(Strings) },
-	}
+    return caddy.ModuleInfo{
+        ID:  "http.handlers.strings",
+        New: func() caddy.Module { return new(Strings) },
+    }
 }
 
 func (m *Strings) Provision(ctx caddy.Context) error {
-	// Intentionally left as a no-op to remain compatible with multiple
-	// Caddy versions. Replacer registration APIs have varied between
-	// releases; add registration here if targeting a specific Caddy
-	// version that provides a stable registration function.
-	return nil
-}
-
-func (m *Strings) ServeHTTP(w http.ResponseWriter, r *http.Request, next caddyhttp.Handler) error {
-	return next.ServeHTTP(w, r)
+    return nil
 }
 
 func (m *Strings) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
-	return nil
+    return nil
+}
+
+func (m *Strings) ServeHTTP(w http.ResponseWriter, r *http.Request, next caddyhttp.Handler) error {
+    // 1. Get the current replacer
+    repl := r.Context().Value(caddy.ReplacerCtxKey).(*caddy.Replacer)
+
+    // 2. Inject the mapping function
+    // This allows {upstream_host.lower} or {header.User-Agent.upper}
+    repl.Map(func(key string) (any, bool) {
+        // Handle .lower
+        if strings.HasSuffix(key, ".lower") {
+            base := strings.TrimSuffix(key, ".lower")
+            
+            // We must retrieve the value of the base key from the replacer
+            if v, ok := repl.GetString(base); ok {
+                return strings.ToLower(v), true
+            }
+        }
+        
+        // Handle .upper
+        if strings.HasSuffix(key, ".upper") {
+            base := strings.TrimSuffix(key, ".upper")
+            
+            if v, ok := repl.GetString(base); ok {
+                return strings.ToUpper(v), true
+            }
+        }
+        
+        return nil, false
+    })
+
+    // 3. Continue the chain
+    return next.ServeHTTP(w, r)
 }
