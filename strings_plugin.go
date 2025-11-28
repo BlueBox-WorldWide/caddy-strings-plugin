@@ -40,10 +40,9 @@ func (m *CaddyStrings) Provision(ctx caddy.Context) error {
 }
 
 func (m *CaddyStrings) ServeHTTP(w http.ResponseWriter, r *http.Request, next caddyhttp.Handler) error {
-	repl, ok := r.Context().Value(caddy.ReplacerCtxKey).(*caddy.Replacer)
-	if ok {
-		mapStringCases(repl)
-	}
+	repl := r.Context().Value(caddy.ReplacerCtxKey).(*caddy.Replacer)
+	
+	mapStringCases(repl)
 
 	return next.ServeHTTP(w, r)
 }
@@ -55,7 +54,7 @@ func mapStringCases(repl *caddy.Replacer) {
 		lower := false
 		upper := false
 
-		if strings.HasSuffix(key, ".lower") || strings.HasSuffix(key, ".upper") {
+		if strings.HasSuffix(key, ".lower") {
 			base = strings.TrimSuffix(key, ".lower")
 			lower = true
 		} else if strings.HasSuffix(key, ".upper") {
@@ -63,20 +62,19 @@ func mapStringCases(repl *caddy.Replacer) {
 			upper = true
 		}
 
-		if (lower || upper) {
-			val := repl.ReplaceAll(base, "")
-
-			if (val != "") {
-				if lower {
-					val = strings.ToLower(val)
-				} else if upper {
-					val = strings.ToUpper(val)
-				}
+		if lower || upper {
+			val, found := repl.GetString(base)
+			if !found {
+				return nil, false
 			}
-
+			if lower {
+				val = strings.ToLower(val)
+			} else if upper {
+				val = strings.ToUpper(val)
+			}
 			return val, true
 		}
-		
+
 		return nil, false
 	})
 }
