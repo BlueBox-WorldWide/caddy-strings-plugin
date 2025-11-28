@@ -42,7 +42,7 @@ func (m *CaddyStrings) Provision(ctx caddy.Context) error {
 func (m *CaddyStrings) ServeHTTP(w http.ResponseWriter, r *http.Request, next caddyhttp.Handler) error {
 	repl, ok := r.Context().Value(caddy.ReplacerCtxKey).(*caddy.Replacer)
 	if ok {
-		mapStringCases(repl)
+		//mapStringCases(repl)
 	}
 
 	return next.ServeHTTP(w, r)
