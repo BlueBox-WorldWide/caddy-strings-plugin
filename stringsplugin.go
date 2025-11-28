@@ -47,12 +47,10 @@ func (m *Strings) Provision(ctx caddy.Context) error {
 
 func (m *Strings) ServeHTTP(w http.ResponseWriter, r *http.Request, next caddyhttp.Handler) error {
 	// log request start
-	if m.logger != nil {
-		m.logger.Debug("strings handler ServeHTTP start",
-			zap.String("method", r.Method),
-			zap.String("uri", r.URL.String()),
-		)
-	}
+	m.logger.Debug("strings handler ServeHTTP start",
+		zap.String("method", r.Method),
+		zap.String("uri", r.URL.String()),
+	)
 
 	repl, ok := r.Context().Value(caddy.ReplacerCtxKey).(*caddy.Replacer)
 	if ok {
