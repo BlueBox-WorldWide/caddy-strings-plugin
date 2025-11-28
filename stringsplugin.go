@@ -2,6 +2,7 @@ package strings_plugin
 
 import (
 	"net/http"
+	"strings"
 
 	"github.com/caddyserver/caddy/v2"
 	"github.com/caddyserver/caddy/v2/caddyconfig/caddyfile"
@@ -50,6 +51,33 @@ func (m *CaddyStrings) ServeHTTP(w http.ResponseWriter, r *http.Request, next ca
 //function that takes repl and maps .lower and .upper
 func mapStringCases(repl *caddy.Replacer) {
 	repl.Map(func(key string) (any, bool) {
+		base := key
+		lower := false
+		upper := false
+
+		if strings.HasSuffix(key, ".lower") || strings.HasSuffix(key, ".upper") {
+			base = strings.TrimSuffix(key, ".lower")
+			lower = true
+		} else if strings.HasSuffix(key, ".upper") {
+			base = strings.TrimSuffix(key, ".upper")
+			upper = true
+		}
+
+		if (lower || upper) {
+			val, found := repl.GetString(base)
+			if !found {
+				return nil, false
+			}
+
+			if lower {
+				val = strings.ToLower(val)
+			} else if upper {
+				val = strings.ToUpper(val)
+			}
+
+			return val, true
+		}
+		
 		return nil, false
 	})
 }
