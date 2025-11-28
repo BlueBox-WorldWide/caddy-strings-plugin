@@ -37,35 +37,8 @@ func (Strings) CaddyModule() caddy.ModuleInfo {
 
 // Provision registers a global mapping for placeholders
 func (m *Strings) Provision(ctx caddy.Context) error {
-    // global mapping for .upper/.lower
-    repl := caddy.NewReplacer()
-    repl.Map(func(key string) (any, bool) {
-        base := key
-        lower := false
-        upper := false
-
-        if strings.HasSuffix(key, ".lower") {
-            base = strings.TrimSuffix(key, ".lower")
-            lower = true
-        } else if strings.HasSuffix(key, ".upper") {
-            base = strings.TrimSuffix(key, ".upper")
-            upper = true
-        }
-
-        v, ok := repl.Get(base)
-        if !ok || v == nil {
-            return nil, false
-        }
-        val := fmt.Sprintf("%v", v)
-        if lower {
-            val = strings.ToLower(val)
-        } else if upper {
-            val = strings.ToUpper(val)
-        }
-        return val, true
-    })
-
-    return nil
+	// No-op here — per-request replacer is used in ServeHTTP so mapping is bound there.
+	return nil
 }
 
 // UnmarshalCaddyfile reads static options (none for now)
@@ -77,37 +50,40 @@ func (m *Strings) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
 func (m *Strings) ServeHTTP(w http.ResponseWriter, r *http.Request, next caddyhttp.Handler) error {
 	repl, ok := r.Context().Value(caddy.ReplacerCtxKey).(*caddy.Replacer)
 	if ok {
-		repl.Map(stringsMappingFunc)
+		repl.Map(makeStringsMapping(repl))
 	}
 	return next.ServeHTTP(w, r)
 }
 
-// Mapping function for .lower and .upper
-func stringsMappingFunc(key string) (any, bool) {
-	base := key
-	lower := false
-	upper := false
+// helper that returns a mapping function bound to the provided replacer.
+// This ensures lookups like "http.request.uri.query" come from the request replacer.
+func makeStringsMapping(repl *caddy.Replacer) func(string) (any, bool) {
+	return func(key string) (any, bool) {
+		base := key
+		lower := false
+		upper := false
 
-	if strings.HasSuffix(key, ".lower") {
-		base = strings.TrimSuffix(key, ".lower")
-		lower = true
-	} else if strings.HasSuffix(key, ".upper") {
-		base = strings.TrimSuffix(key, ".upper")
-		upper = true
-	}
+		if strings.HasSuffix(key, ".lower") {
+			base = strings.TrimSuffix(key, ".lower")
+			lower = true
+		} else if strings.HasSuffix(key, ".upper") {
+			base = strings.TrimSuffix(key, ".upper")
+			upper = true
+		}
 
-	v, ok := caddy.NewReplacer().Get(base) // get global or per-request value
-	if !ok || v == nil {
-		return nil, false
-	}
+		v, ok := repl.Get(base)
+		if !ok || v == nil {
+			return nil, false
+		}
 
-	val := fmt.Sprintf("%v", v)
-	if lower {
-		val = strings.ToLower(val)
-	} else if upper {
-		val = strings.ToUpper(val)
+		val := fmt.Sprintf("%v", v)
+		if lower {
+			val = strings.ToLower(val)
+		} else if upper {
+			val = strings.ToUpper(val)
+		}
+		return val, true
 	}
-	return val, true
 }
 
 // Caddyfile parser
