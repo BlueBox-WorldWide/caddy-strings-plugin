@@ -8,6 +8,7 @@ import (
 	"github.com/caddyserver/caddy/v2/caddyconfig/caddyfile"
 	"github.com/caddyserver/caddy/v2/caddyconfig/httpcaddyfile"
 	"github.com/caddyserver/caddy/v2/modules/caddyhttp"
+	"go.uber.org/zap"
 )
 
 func init() {
@@ -24,7 +25,9 @@ var (
 	_ caddyfile.Unmarshaler       = (*CaddyStrings)(nil)
 )
 
-type CaddyStrings struct{}
+type CaddyStrings struct{
+	logger *zap.Logger
+}
 
 // CaddyModule returns module info
 func (CaddyStrings) CaddyModule() caddy.ModuleInfo {
@@ -36,19 +39,25 @@ func (CaddyStrings) CaddyModule() caddy.ModuleInfo {
 
 // Provision registers a global mapping for placeholders
 func (m *CaddyStrings) Provision(ctx caddy.Context) error {
+	m.logger = ctx.Logger() // m.logger is a *zap.Logger
     return nil
+}
+
+// Log returns the current default logger for this module.
+func (m *CaddyStrings) Log() *zap.Logger {
+	return m.logger
 }
 
 func (m *CaddyStrings) ServeHTTP(w http.ResponseWriter, r *http.Request, next caddyhttp.Handler) error {
 	repl := r.Context().Value(caddy.ReplacerCtxKey).(*caddy.Replacer)
 	
-	mapStringCases(repl)
+	m.mapStringCases(repl)
 
 	return next.ServeHTTP(w, r)
 }
 
 //function that takes repl and maps .lower and .upper
-func mapStringCases(repl *caddy.Replacer) {
+func (m *CaddyStrings) mapStringCases(repl *caddy.Replacer) {
 	repl.Map(func(key string) (any, bool) {
 		base := key
 		lower := false
@@ -63,15 +72,22 @@ func mapStringCases(repl *caddy.Replacer) {
 		}
 
 		if lower || upper {
+			m.Log().Info("Mapping string case transformation", zap.String("base", base), zap.Bool("lower", lower), zap.Bool("upper", upper))
 			val, found := repl.GetString(base)
 			if !found {
+				m.Log().Info("Base variable not found for case transformation", zap.String("base", base))
 				return nil, false
+			} else {
+				m.Log().Info("Base variable found for case transformation", zap.String("base", base), zap.String("value", val))
 			}
 			if lower {
 				val = strings.ToLower(val)
 			} else if upper {
 				val = strings.ToUpper(val)
 			}
+
+			m.Log().Info("Mapped string case transformation", zap.String("key", key), zap.String("value", val))
+
 			return val, true
 		}
 
