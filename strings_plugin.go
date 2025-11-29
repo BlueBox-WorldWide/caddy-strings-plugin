@@ -49,10 +49,8 @@ func (m *CaddyStrings) Log() *zap.Logger {
 }
 
 func (m *CaddyStrings) ServeHTTP(w http.ResponseWriter, r *http.Request, next caddyhttp.Handler) error {
-	// Use exported helper to create a replacer populated with HTTP variables.
-	// addHTTPVarsToReplacer is unexported in the caddyhttp package, so call NewTestReplacer instead.
-	repl := caddyhttp.NewTestReplacer(r)
-
+	repl := r.Context().Value(caddy.ReplacerCtxKey).(*caddy.Replacer)
+	
 	m.mapStringCases(repl)
 
 	return next.ServeHTTP(w, r)
