@@ -58,7 +58,7 @@ func (m *CaddyStrings) ServeHTTP(w http.ResponseWriter, r *http.Request, next ca
 
 //function that takes repl and maps .lower and .upper
 func (m *CaddyStrings) mapStringCases(repl *caddy.Replacer) {
-	repl.Map(func(key string) (any, bool) {
+	repl.MapWithPriority(func(key string) (any, bool) {
 		base := key
 		lower := false
 		upper := false
@@ -92,7 +92,7 @@ func (m *CaddyStrings) mapStringCases(repl *caddy.Replacer) {
 		}
 
 		return nil, false
-	})
+	}, 3)
 }
 
 // UnmarshalCaddyfile reads static options (none for now)
